@@ -7,22 +7,30 @@
 #include <detours/detver.h>
 
 static std::unordered_set<std::string> s_files;
-static size_t s_basePathLength = 0;
+static std::string s_basePath;
 static std::ofstream s_listfile = std::ofstream("(listfile)", std::ofstream::out | std::ofstream::trunc);
 
 static char* (__cdecl* sub_433590_orig)(int a1, int a2, char const* fn) = (decltype(sub_433590_orig))0x00433590;
 static char* __cdecl sub_433590_hk(int a1, int a2, char const* fn)
 {
-    std::string path = fn;
-    path.erase(0, s_basePathLength);
+    char* result = sub_433590_orig(a1, a2, fn);
+
+    std::string raw = fn;
+    if (raw.size() <= s_basePath.size() || raw.substr(0, s_basePath.size()) != s_basePath)
+        return result;
+
+    std::string path = raw.substr(s_basePath.size());
+    if (path.substr(0, 5) == "Data\\" || path.find('\\') == std::string::npos)
+        return result;
 
     if (s_files.find(path) == s_files.end())
     {
         s_files.insert(path);
-        s_listfile << path << '\n';
+        s_listfile << path << " -> 0x" << std::hex << reinterpret_cast<uintptr_t>(result) << std::dec << '\n';
+        s_listfile.flush();
     }
 
-    return sub_433590_orig(a1, a2, fn);
+    return result;
 }
 
 #pragma warning( push )
@@ -41,7 +49,7 @@ int __stdcall DllMain(HMODULE hModule, DWORD reason, LPVOID)
         std::wstring t(&buffer[0]);
         std::string clientDir(t.begin(), t.end());
 
-        s_basePathLength = clientDir.substr(0, clientDir.find_last_of("\\")).length() + 1;
+        s_basePath = clientDir.substr(0, clientDir.find_last_of("\\") + 1);
 
         DetourTransactionBegin();
         DetourUpdateThread(GetCurrentThread());
