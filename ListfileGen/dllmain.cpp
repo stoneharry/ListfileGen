@@ -26,7 +26,7 @@ static char* __cdecl sub_433590_hk(int a1, int a2, char const* fn)
     if (s_files.find(path) == s_files.end())
     {
         s_files.insert(path);
-        s_listfile << path << " -> 0x" << std::hex << reinterpret_cast<uintptr_t>(result) << std::dec << '\n';
+        s_listfile << path << '\n';
         s_listfile.flush();
     }
 
